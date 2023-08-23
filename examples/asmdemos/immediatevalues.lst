@@ -1,0 +1,15 @@
+
+immediatevalues.o:     file format elf32-littlearm
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	e3a00001 	mov	r0, #1
+   4:	e3a000ff 	mov	r0, #255	; 0xff
+   8:	e3a00c01 	mov	r0, #256	; 0x100
+   c:	e3a00fff 	mov	r0, #1020	; 0x3fc
+  10:	e3a00005 	mov	r0, #5
+  14:	e51f0000 	ldr	r0, [pc, #-0]	; 1c <_start+0x1c>
+  18:	ef000011 	svc	0x00000011
+  1c:	01234567 	.word	0x01234567
