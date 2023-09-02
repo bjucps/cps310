@@ -1,5 +1,5 @@
 /* ArmSim Kernel API: Defines interface between ArmSim kernels (CPUs) and hosts (systems).
- (c) 2016, Bob Jones University */
+ (c) 2016-2023, Bob Jones University */
 #ifndef ARMSIM_KERNEL_API
 #define ARMSIM_KERNEL_API
 
@@ -20,7 +20,7 @@ typedef int32_t		sword;
 
 /* Which mode/register bank are we talking about? */
 typedef enum ask_mode {
-	am_nil = -1,	/* The invalid mode (or, if you are asking for a register from a given bank, the current mode) */
+	am_nil = -1,		/* The invalid mode (or, if you are asking for a register from a given bank, the current mode) */
 	am_usr = 0,		/* USR mode register bank) */
 	am_fiq,			/* FIQ mode/bank (triggered by FIQ signal to CPU) */
 	am_irq,			/* IRQ mode/bank (triggered by IRQ signal to CPU) */
@@ -29,7 +29,9 @@ typedef enum ask_mode {
 	am_max
 } ask_mode_t;
 
-/* What sort of signal are we giving the CPU? */
+/* What sort of signal are we giving the CPU?
+  (used to control concurrent simulation on a background thread)
+*/
 typedef enum ask_signal {
 	as_halt,
 	as_irq,
@@ -39,7 +41,7 @@ typedef enum ask_signal {
 /* Configuration bit flags */
 typedef enum ask_config {
 	ac_nothing		= 0x00000000,	/* nothing special enabled (default) */
-	ac_trace_log	= 0x00000001,	/* required; if set, the kernel MUST emit a trace-log call after EVERY instruction */
+	ac_trace_log		= 0x00000001,	/* required; if set, the kernel MUST emit a trace-log call after EVERY instruction */
 	ac_mpu_on		= 0x00000002,	/* optional (with feature "mpu"); if set, the kernel must enforce memory protections when in "usr" mode */
 	ac_cache_on		= 0x00000004,	/* optional (with feature "cache"); if cleared, the kernel must bypass its caching support and directly call host-load/store for all memory ops */
 } ask_config_t;
@@ -67,7 +69,7 @@ typedef struct ask_host_services {
 /* Structure of event counters maintained/published by the kernel */
 typedef struct ask_stats {
 	unsigned int instructions;		/* Number of instructions executed so far */
-	unsigned int loads;				/* Total number of memory loads (including instruction fetches) */
+	unsigned int loads;			/* Total number of memory loads (including instruction fetches) */
 	unsigned int stores;			/* Total number of memory stores */
 	unsigned int load_misses;		/* Total number of loads that were cache misses (for cache-implementing kernels) */
 	unsigned int store_misses;		/* Total number of stores that were cache misses (ditto) */
@@ -80,11 +82,15 @@ typedef struct ask_stats {
 /* Return a pointer to a NULL-terminated list of NUL-terminated C-strings describing the kernel's features */
 char**	ask_info(void);
 
+/* Disassemble a given 32-bit ARM instruction into the string buffer provided
+   (to be called only if ask_info includes "disasm" in the feature list) */
+void	ask_disasm(word instruction, char *buff, size_t size);
+
 /* Reset/initialize the simulated CPU, binding it to the environment provided by the host services functions */
 void	ask_init(const struct ask_host_services *);
 
 /* Set/get the current configuration flags */
-void			ask_config_set(ask_config_t flags);
+void		ask_config_set(ask_config_t flags);
 ask_config_t	ask_config_get(void);
 
 /* Populate a stats-counter struct with the current CPU performance statistics */
@@ -94,7 +100,7 @@ void	ask_stats_report(struct ask_stats *);
 word	ask_reg_get(ask_mode_t bank, int index);
 void	ask_reg_set(ask_mode_t bank, int index, word value);
 
-/* Get/set CPSR value (setting can cause mode changes) */
+/* Get/set CPSR value (setting can cause mode changes!) */
 word	ask_cpsr_get(void);
 void	ask_cpsr_set(word value);
 
