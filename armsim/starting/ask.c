@@ -9,6 +9,10 @@ char **ask_info(void) {
     return NULL;
 }
 
+void ask_disasm(word address, word instruction, char *buff, size_t size) {
+	// TODO
+}
+
 void ask_init(const struct ask_host_services *host) {
     // TODO
 }
