@@ -82,9 +82,11 @@ typedef struct ask_stats {
 /* Return a pointer to a NULL-terminated list of NUL-terminated C-strings describing the kernel's features */
 char**	ask_info(void);
 
-/* Disassemble a given 32-bit ARM instruction into the string buffer provided
-   (to be called only if ask_info includes "disasm" in the feature list) */
-void	ask_disasm(word instruction, char *buff, size_t size);
+/* Disassemble a given 32-bit ARM <instruction> into the string buffer provided;
+   <address> is the address where this instruction is found in memory; it is
+   technically optional but required to accurately calculate branch targets.
+   (To be called only if ask_info includes "disasm" in the feature list.) */
+void	ask_disasm(word address, word instruction, char *buff, size_t size);
 
 /* Reset/initialize the simulated CPU, binding it to the environment provided by the host services functions */
 void	ask_init(const struct ask_host_services *);

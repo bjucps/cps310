@@ -14,8 +14,9 @@ import struct
 import sys
 import threading
 import time
+from typing import Optional
 
-__version__ = "2016-11-18-1300"
+__version__ = "2023-09-04-1200"
 
 try:
     import msvcrt
@@ -381,11 +382,14 @@ class ArmSimShell:
     
     MMIO_BASE = 0x80000000
     
-    def __init__(self, mem_size, trace_log=None, debug_log=None, checksum=False, show_mode=False):
+    def __init__(self, mem_size, trace_log=None, debug_log=None, checksum=False, show_mode=False, disasm_func=None):
         """Create an ArmSim host system with <mem_size> bytes of RAM.
         
         If <trace_log> is not None, generate a trace log to that file (STDERR if <trace_log> is '-').
         If <debug_log> is not None, generate a debug log to that file (STDERR if <debug_log> is '-').
+
+        If <show_mode> is True, include the current mode name in each trace log record.
+        If <disasm_func> is non-None, call it to include the disassembly of the instruction executed for each trace log record.
         """
         # Ensure sane/legal memory sizes (word-aligned)
         assert (0x1000 <= mem_size < self.MMIO_BASE)
@@ -393,6 +397,7 @@ class ArmSimShell:
         
         self._show_md5 = checksum
         self._show_mode = show_mode
+        self._disasm_func = disasm_func
         if trace_log:
             self._tlog = open(trace_log, "wt", encoding="utf-8") if trace_log != '-' else sys.stderr
         else:
@@ -463,14 +468,20 @@ class ArmSimShell:
     
     def log_trace(self, step, pc, cpsr, *gprs):
         if self._tlog:
+            if self._disasm_func:
+                iaddr = pc
+                iword = self._ram[iaddr >> 2]
+                disasm = "\n        ({0})".format(self._disasm_func(iaddr, iword))
+            else:
+                disasm = ""
             cksum = self.md5() if self._show_md5 else "-"*32
             smode = MODE_NAMES.get(cpsr & 0x1f, "???") if self._show_mode else "---"
             flags = (cpsr >> 28) & 0b1111
             print("""\
 {0:06} {1:08x} {2} {3} {4:04b}  0={5:08x} 1={6:08x} 2={7:08x}\n\
         3={8:08x}  4={9:08x}  5={10:08x}  6={11:08x}  7={12:08x}  8={13:08x}\n\
-        9={14:08x} 10={15:08x} 11={16:08x} 12={17:08x} 13={18:08x} 14={19:08x}\
-""".format(step, pc, cksum, smode, flags, *gprs), file=self._tlog)
+        9={14:08x} 10={15:08x} 11={16:08x} 12={17:08x} 13={18:08x} 14={19:08x}{20}\
+""".format(step, pc, cksum, smode, flags, *gprs, disasm), file=self._tlog)
             self._tlog.flush()
 
         for listener in self._beats:
@@ -691,6 +702,7 @@ class ArmSimKernel:
     """
     def __init__(self, loaded_library):
         self._dll = loaded_library
+        self._has_disasm = False    # disasm is a backwards compatible extension to API version 1.0 (see `info()`)
         
         # ask_info() -> char ** (NULL terminated list of NUL-terminated C strings)
         self._dll.ask_info.restype = ctypes.POINTER(ctypes.c_char_p)
@@ -756,7 +768,28 @@ class ArmSimKernel:
                 else:
                     info[fields[0]] = True
                 i += 1
+
+        # backwards-compatible addendum to API version 1.0: 
+        # if we have a "disasm" feature, resolve/use the "ask_disasm" library function for trace logs
+        if "disasm" in info:
+            self._has_disasm = True
+            self._dll.ask_disasm.restype = None
+            self._dll.ask_disasm.argtypes = (ctypes.c_uint, ctypes.c_uint, ctypes.c_char_p, ctypes.c_size_t)
+
         return info
+
+    def disasm(self, address: int, instruction: int) -> str:
+        """Uses ask_disasm(...) [if available!] to disassemble `instruction` (at `address` in RAM).
+
+        If the kernel doesn't implement ask_disasm(...), returns None instead.
+        """
+        if not self._has_disasm:
+            return None
+
+        blen = 128
+        buff = ctypes.create_string_buffer(blen)
+        self._dll.ask_disasm(address, instruction, buff, blen)
+        return ctypes.string_at(buff).decode().strip()
     
     def init(self, host_services):
         """Calls ask_init(...), passing in a structure of callbacks.
@@ -882,6 +915,8 @@ def main(argv):
     ap = argparse.ArgumentParser()
     ap.add_argument("-c", "--checksum", dest="checksum", action="store_true", default=False,
                     help="Compute and display the RAM checksum with every trace log entry (SLOW).")
+    ap.add_argument("-D", "--disasm", dest="disasm", action="store_true", default=False,
+                    help="Include ARM instruction disassembly in each trace log record (if kernel supports).")
     ap.add_argument("-d", "--debug-log", dest="debug_log", metavar="FILE", default=None,
                     help="Save debug log messages to FILE (or STDERR if FILE is '-')")
     ap.add_argument("-i", "--console-input", dest="input_file", metavar="FILE", default=None,
@@ -918,7 +953,8 @@ def main(argv):
                         trace_log=args.trace_log,
                         debug_log=args.debug_log,
                         checksum=args.checksum,
-                        show_mode=args.mode)
+                        show_mode=args.mode,
+                        disasm_func=ask.disasm if args.disasm else None)
 
     # If so asked, pause and wait for input at this point
     if args.pause:
