@@ -39,7 +39,7 @@ ldr r1, =EOL @ end of line
 swi SWI_PrStr
 swi SWI_Exit @ stop executing: end of program
 .data
-Message1: .asciz"Hello World!"
+Message1: .asciz "Hello World!"
 EOL: .asciz "\n"
 NewL: .ascii "\n"
 Blank: .ascii " "

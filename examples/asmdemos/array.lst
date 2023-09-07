@@ -1,0 +1,25 @@
+
+array.o:     file format elf32-littlearm
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	e59f102c 	ldr	r1, [pc, #44]	; 34 <LOOP+0x24>
+   4:	e5911000 	ldr	r1, [r1]
+   8:	e59f2028 	ldr	r2, [pc, #40]	; 38 <LOOP+0x28>
+   c:	e3a00000 	mov	r0, #0
+
+00000010 <LOOP>:
+  10:	e5923000 	ldr	r3, [r2]
+  14:	e0800003 	add	r0, r0, r3
+  18:	e2822004 	add	r2, r2, #4
+  1c:	e2411001 	sub	r1, r1, #1
+  20:	e3510000 	cmp	r1, #0
+  24:	1afffff9 	bne	10 <LOOP>
+  28:	e59f100c 	ldr	r1, [pc, #12]	; 3c <LOOP+0x2c>
+  2c:	e5810000 	str	r0, [r1]
+  30:	ef000011 	svc	0x00000011
+  34:	00000000 	.word	0x00000000
+  38:	00000004 	.word	0x00000004
+  3c:	00000010 	.word	0x00000010

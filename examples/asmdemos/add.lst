@@ -1,0 +1,30 @@
+
+add.o:     file format elf32-littlearm
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	e3a03042 	mov	r3, #66	; 0x42
+   4:	e59f4028 	ldr	r4, [pc, #40]	; 34 <C+0x4>
+   8:	e59f0028 	ldr	r0, [pc, #40]	; 38 <C+0x8>
+   c:	e59f1028 	ldr	r1, [pc, #40]	; 3c <C+0xc>
+  10:	e59f2028 	ldr	r2, [pc, #40]	; 40 <C+0x10>
+  14:	e5900000 	ldr	r0, [r0]
+  18:	e5911000 	ldr	r1, [r1]
+  1c:	e0810002 	add	r0, r1, r2
+  20:	e5820000 	str	r0, [r2]
+  24:	ef000000 	svc	0x00000000
+
+00000028 <A>:
+  28:	00000000 	.word	0x00000000
+
+0000002c <B>:
+  2c:	00000029 	.word	0x00000029
+
+00000030 <C>:
+  30:	00000001 	.word	0x00000001
+  34:	deadbeef 	.word	0xdeadbeef
+  38:	0000002c 	.word	0x0000002c
+  3c:	00000030 	.word	0x00000030
+  40:	00000028 	.word	0x00000028

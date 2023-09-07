@@ -106,13 +106,16 @@ void	ask_reg_set(ask_mode_t bank, int index, word value);
 word	ask_cpsr_get(void);
 void	ask_cpsr_set(word value);
 
-/* Query: is the simulated CPU running at the moment (e.g., on a background thread)? */
+/* Query: is the simulated CPU running at the moment (e.g., on a background thread)?
+   0 -> false; non-0 -> true */
 int	ask_cpu_running(void);
 
 /* Signal a [running] CPU of an external event (forced halt, IRQ, or FIQ) */
 void	ask_cpu_signal(ask_signal_t signal);
 
-/* Start the CPU running (for <cycles> instructions, or until SWI 0 if <cycles> == 0) */
+/* Start the CPU running (for <cycles> instructions, or until SWI 0 if <cycles> == 0);
+   returns the number of instructions actually executed (which should always match
+   <cycles> unless <cycles> was 0) */
 int	ask_cpu_run(int cycles);
 
 #ifdef __cplusplus

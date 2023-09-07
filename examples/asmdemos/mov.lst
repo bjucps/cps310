@@ -1,0 +1,11 @@
+
+mov.o:     file format elf32-littlearm
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	e1a05003 	mov	r5, r3
+   4:	e3a0500f 	mov	r5, #15
+   8:	e3a054ff 	mov	r5, #-16777216	; 0xff000000
+   c:	e1a05243 	asr	r5, r3, #4
