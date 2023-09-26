@@ -1,0 +1,2 @@
+pc=entry
+sp=0x7000
