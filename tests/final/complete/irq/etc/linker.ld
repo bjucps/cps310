@@ -1,0 +1,1 @@
+../../svc/etc/linker.ld

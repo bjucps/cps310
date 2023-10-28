@@ -56,6 +56,8 @@ except ImportError:
             fd = sys.stdin.fileno()
             attrs = termios.tcgetattr(fd)
             tty.setcbreak(fd)
+            tty_thunk = lambda : termios.tcsetattr(fd, termios.TCSADRAIN, attrs)
+            SHUTDOWN.append(tty_thunk)
             try:
                 while not self._done.wait(0.1):
                     rds, _, _ = select.select([fd], [], [], 0)
@@ -67,7 +69,8 @@ except ImportError:
                         if self._notify:
                             self._notify()
             finally:
-                termios.tcsetattr(fd, termios.TCSADRAIN, attrs)
+                SHUTDOWN.remove(tty_thunk)
+                tty_thunk()
 
 
 # Constants
@@ -156,7 +159,7 @@ def panic(msg, *args, **kwargs):
     """
     print("PANIC: " + msg, *args, **kwargs)
     shutdown()
-    sys.exit(1)
+    os._exit(1)  # sys.exit doesn't work inside ctypes callbacks
 
 
 class ElfFile(object):
@@ -243,12 +246,15 @@ class ArmsimElfCompatScript:
     """
     def __init__(self, armsim_section: bytes, elf_entry_point: int = 0):
         self._mode = None
+        self._requires = []
         self._regs = []
 
         chunks = armsim_section.decode('utf-8').lower().split()
         for c in chunks:
             name, value = c.split('=', 1)
-            if name == "mode":
+            if name == "requires":
+                self._requires.append(value)
+            elif name == "mode":
                 self._mode = value
             else:
                 if value == "entry":
@@ -269,9 +275,14 @@ class ArmsimElfCompatScript:
     def apply(self, ask):
         """Apply a compatibiliy setting script to an already-initialized/reset kernel.
         """
+        info_set = ask.info()
+        for req in self._requires:
+            if req not in info_set:
+                panic("Requires unsupported feature '{0}'!".format(req))
+
         if self._mode:
             bits, requires, enum = MODE_MAP[self._mode]
-            if requires not in ask.info():
+            if requires not in info_set:
                 panic("Starting mode {0} requires feature '{1}', which is not supported!".format(self._mode, requires))
             ask.cpsr_set((ask.cpsr_get() & ~0x1f) | bits)
         

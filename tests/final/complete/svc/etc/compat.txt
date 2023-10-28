@@ -1,0 +1,5 @@
+requires=svc
+mode=sys
+pc=entry
+sp_usr=0x7000
+sp_svc=0x7800

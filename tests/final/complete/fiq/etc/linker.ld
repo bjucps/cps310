@@ -1,0 +1,1 @@
+../../irq/etc/linker.ld
