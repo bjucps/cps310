@@ -120,7 +120,7 @@ MODE_MAP = {
     "svc": (0x13, "svc", SVC),   # "svc" mode has mode bits 10011 and requires the "svc" feature
     "irq": (0x12, "irq", IRQ),   # "irq" mode has mode bits 10010 and requires the "irq" feature
     "fiq": (0x11, "fiq", FIQ),   # "fiq" mode has mode bits 10001 and requires the "fiq" feature
-    "sys": (0x1f, "svc", SYS),   # "sys" mode has mode bits 11111 and requires the "svc" feature
+    "sys": (0x1f, None, SYS),   # "sys" mode has mode bits 11111 and is the "baseline" mode presumed by pre-mode-switching code
 }
 
 REG_NAME_MAP = {
@@ -282,7 +282,7 @@ class ArmsimElfCompatScript:
 
         if self._mode:
             bits, requires, enum = MODE_MAP[self._mode]
-            if requires not in info_set:
+            if (requires is not None) and (requires not in info_set):
                 panic("Starting mode {0} requires feature '{1}', which is not supported!".format(self._mode, requires))
             ask.cpsr_set((ask.cpsr_get() & ~0x1f) | bits)
         
