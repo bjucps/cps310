@@ -16,7 +16,7 @@ import threading
 import time
 from typing import Optional
 
-__version__ = "2023-09-04-1200"
+__version__ = "2023-11-29-1542"
 
 try:
     import msvcrt
@@ -54,6 +54,10 @@ except ImportError:
 
         def run(self):
             fd = sys.stdin.fileno()
+            if not os.isatty(fd):
+                print("WARNING: STDIN is not a tty; MMIO terminal input DISABLED!", file=sys.stderr)
+                return
+
             attrs = termios.tcgetattr(fd)
             tty.setcbreak(fd)
             tty_thunk = lambda : termios.tcsetattr(fd, termios.TCSADRAIN, attrs)
@@ -271,6 +275,9 @@ class ArmsimElfCompatScript:
                     reg = REG_NAME_MAP[info[0]]
                     bank = MODE_MAP[info[1]][2] # Get 3rd element (mode index/enum value) of mode-map tuple for this mode name
                 self._regs.append((bank, reg, value))
+
+    def needs_mode(self, mode_name: str) -> bool:
+        return (self._mode == mode_name) or (mode_name in self._requires)
 
     def apply(self, ask):
         """Apply a compatibiliy setting script to an already-initialized/reset kernel.
@@ -990,15 +997,25 @@ def main(argv):
 
     # Validate args/features; warn about possibly bad stuff
     if args.cache and ("cache" not in info):
-        print("WARNING: --cache specified, but {0} does not implement 'cache'...".format(args.kernel))
+        print("WARNING: --cache specified, but {0} does not implement 'cache'...".format(args.kernel), file=sys.stderr)
     if args.fiq_int and ("fiq" not in info):
-        print("WARNING: --fiq-interval specified, but {0} does not implement 'fiq'...".format(args.kernel))
-    if ("usr" in info) and (args.mem_size < 64*1024):
-        print("WARNING: {0} supports 'usr' mode; you should probably have at least 64KB of RAM...".format(args.kernel))
+        print("WARNING: --fiq-interval specified, but {0} does not implement 'fiq'...".format(args.kernel), file=sys.stderr)
 
     # If there's something to load/run, do it...
     if args.module:
         elf = ElfFile(args.module)
+
+        # Initialize the CPU (so we can do compatibility checks)
+        ask.init(shell.host_services)
+ 
+        # Pre-configure processor based on embedded ".armsim" section in ELF file (if it exists)
+        elf_compat = elf.get_section(".armsim")
+        if elf_compat:
+            script = ArmsimElfCompatScript(elf_compat, elf.entry)
+            script.apply(ask)
+            if script.needs_mode("usr") and (args.mem_size < 64*1024):
+                print("WARNING: {0} requires 'usr' mode; you should probably configure at least 64KB of RAM...".format(args.module), file=sys.stderr)
+
         shell.load_elf(elf)
         print("MD5({0}): {1}".format(args.module, shell.md5()))
 
@@ -1006,9 +1023,6 @@ def main(argv):
                                 notifier=ask.signal_irq if 'irq' in info else None)
         console.attach(shell)
         SHUTDOWN.append(console.close)
-
-        # Initialize the CPU
-        ask.init(shell.host_services)
 
         # Set config flags (if any)
         cflags = AC_NOTHING
@@ -1019,12 +1033,6 @@ def main(argv):
         if args.cache:
             cflags |= AC_CACHE_ON
         ask.config_set(cflags)
-
-        # Pre-configure processor based on embedded ".armsim" section in ELF file (if it exists)
-        elf_compat = elf.get_section(".armsim")
-        if elf_compat:
-            script = ArmsimElfCompatScript(elf_compat, elf.entry)
-            script.apply(ask)
 
         print()
         print("-" * 60)

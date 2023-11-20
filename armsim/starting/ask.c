@@ -5,8 +5,12 @@
 #include "askapi.h"
 
 char **ask_info(void) {
-    // TODO
-    return NULL;
+	static char *info[] = {
+		"author=???",
+		"api=???",
+		NULL,
+	};
+	return info;
 }
 
 void ask_disasm(word address, word instruction, char *buff, size_t size) {
