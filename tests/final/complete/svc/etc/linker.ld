@@ -6,10 +6,10 @@ PHDRS {
 SECTIONS
 {
     . = 0x0000;
-    .kernel 0x0000 : {
+    .text 0x0000 : {
 	KEEP(*/boot.o(.kernel.vectors))
-	*/boot.o
-        */kernel.o
+	*/boot.o(.kernel.*)
+        */kernel.o(.text .data .rodata .bss)
     } :kernel
 
 

@@ -3,6 +3,7 @@
 @---------------------------------------------------------
 @ Exception vector table; bootstrap, ISR, and syscall code
 @---------------------------------------------------------
+.file "boot.s"
 
 .equ    CONSOLE_BASE,   0x80000000
 
@@ -13,7 +14,7 @@
 @ Exception Vector Table (at address 0)
 @--------------------------------------
 .org    0x0000
-.section .kernel.vectors
+.section .kernel.vectors, "ax", %progbits
     b       do_reset    @ 00: RESET
     swi     0           @ 04: ?
     b       do_swi      @ 08: SWI
@@ -33,7 +34,7 @@ do_fiq:                 @ 1C: FIQ
 
 @ System reset handler/bootstrap
 @-------------------------------
-.section .kernel.text
+.section .kernel.text, "ax", %progbits
 do_reset:
     @ Set up SVC mode stack
     ldr     sp, =0x00007400
@@ -174,7 +175,7 @@ kunlock:
 
 @ String literals
 @----------------
-.section .kernel.rodata
+.section .kernel.rodata, "a", %progbits
 
 msg_bad_syscall:    .asciz  "Bad syscall number."
 

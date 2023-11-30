@@ -20,8 +20,8 @@ mkdir -p obj
 # ---------------------------------------------------------------------------------
 if [ ! -f obj/libc.a ]; then
 	# Compile/assemble libc sources
-	arm-none-eabi-gcc -c -o obj/libc.o -Iinc/ lib/libc.c -nostdlib -fno-builtin -nostartfiles -nodefaultlibs  -mcpu=arm7tdmi
-	arm-none-eabi-as -o obj/crt.o lib/crt.s
+	arm-none-eabi-gcc -g -c -o obj/libc.o -Iinc/ lib/libc.c -nostdlib -fno-builtin -nostartfiles -nodefaultlibs  -mcpu=arm7tdmi
+	arm-none-eabi-as -g -o obj/crt.o lib/crt.s
 
 	# Produce an archive of libc
 	arm-none-eabi-ar r obj/libc.a obj/crt.o obj/libc.o >/dev/null
@@ -32,10 +32,10 @@ fi
 # --------------------------------------------------------------------
 
 # Compile program module (pass our additional arguments, too, in case they specify a -Dxxxxx define)
-arm-none-eabi-gcc -c -o "$OBJFILE" "$INFILE" "$@" -Iinc/ -nostdlib -fno-builtin -nostartfiles -nodefaultlibs  -mcpu=arm7tdmi
+arm-none-eabi-gcc -g -c -o "$OBJFILE" "$INFILE" "$@" -Iinc/ -nostdlib -fno-builtin -nostartfiles -nodefaultlibs  -mcpu=arm7tdmi
 
 # Link all modules
-arm-none-eabi-ld -Map "$MAPFILE" -nostdlib -Ttext 0x1000 -N -o "$EXEFILE" "$OBJFILE" obj/libc.a
+arm-none-eabi-ld -g -Map "$MAPFILE" -nostdlib -Ttext 0x1000 -N -o "$EXEFILE" "$OBJFILE" obj/libc.a
 
 # Add in the compatibility manifest
 arm-none-eabi-objcopy --add-section .armsim=etc/compat.txt --set-section-flags .armsim=noload "$EXEFILE"

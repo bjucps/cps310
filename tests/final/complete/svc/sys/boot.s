@@ -3,12 +3,13 @@
 @-------------------------------------------------
 @ Exception vector table and low-level kernel code
 @-------------------------------------------------
+.file "boot.s"
 
 .equ    CONSOLE_BASE,   0x80000000
 
 .global kgetc, kputc
 
-.section .kernel.vectors
+.section .kernel.vectors, "ax", %progbits
 
 @ Exception Vector Table (at address 0)
 @--------------------------------------
@@ -23,7 +24,7 @@
     swi     0    @b       fiq_handler
 
 
-.section .kernel.text
+.section .kernel.text, "ax", %progbits
 
 @ Exception handlers
 @-------------------
@@ -84,7 +85,7 @@ _poll:
 
 
 
-.section .kernel.rodata
+.section .kernel.rodata, "a", %progbits
 msg_bad_syscall:    .asciz  "Bad syscall number."
 
 

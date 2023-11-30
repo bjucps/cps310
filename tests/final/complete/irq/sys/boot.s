@@ -3,12 +3,13 @@
 @---------------------------------------------------------
 @ Exception vector table; bootstrap, ISR, and syscall code
 @---------------------------------------------------------
+.file "boot.s"
 
 .equ    CONSOLE_BASE,   0x80000000
 
 .global kputc, kgetc, klock, kunlock
 
-.section .kernel.vectors
+.section .kernel.vectors, "ax", %progbits
 
 @ Exception Vector Table (at address 0)
 @--------------------------------------
@@ -22,7 +23,7 @@
     b       do_irq      @ 18: IRQ
     swi     0           @ 1C: FIQ
 
-.section .kernel.text
+.section .kernel.text, "ax", %progbits
 
 @ System reset handler/bootstrap
 @-------------------------------
@@ -145,7 +146,7 @@ kunlock:
 
 @ String literals
 @----------------
-.section .kernel.rodata
+.section .kernel.rodata, "a", %progbits
 
 msg_bad_syscall:    .asciz  "Bad syscall number."
 
