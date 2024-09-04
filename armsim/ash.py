@@ -16,7 +16,7 @@ import threading
 import time
 from typing import Optional
 
-__version__ = "2023-11-29-1542"
+__version__ = "2024-09-04-0938"
 
 try:
     import msvcrt
@@ -897,7 +897,7 @@ def mockup_tests(ask):
     # Does config setting work?
     ask.config_set(AC_TRACE_LOG)
     if not (ask.config_get() & AC_TRACE_LOG):
-        panic("Unable to verify that ask_config_set/ask_config_set work...")
+        panic("Unable to verify that ask_config_set/ask_config_get work...")
 
     # How about register setting?
     regvalues = [random.randint(0, 2**32-1) for i in range(16)]
