@@ -70,6 +70,13 @@ int main(int argc, char **argv) {
     LIBASK_API_NAMES
 #undef X
 
+    char *author = NULL;
+    if (kernel_has(&libask, "author=", &author)) {
+        printf("Hello, %s!\n", author);
+    } else {
+        printf("Naughty author, not including an 'author=...' tag in ask_info()'s output!\n");
+    }
+
     if (kernel_has(&libask, "mockup", NULL)) {
         printf("Running 'mockup' tests on '%s'...\n", argv[1]);
         for (int i = 0; i < 100; ++i) {
@@ -139,10 +146,8 @@ static void mock_panic(const char *msg) {
 
 int mockup_tests(struct libask_api *api) {
     int ret = 1;
-    
-    unsigned int seed = (unsigned int)time(NULL);
-    srandom(seed);
-
+   
+    // set up mock hosting environment 
     ask_host_services_t host = {
         .mem_load = mock_mem_load,
         .mem_store = mock_mem_store,
@@ -151,23 +156,46 @@ int mockup_tests(struct libask_api *api) {
         .panic = mock_panic,
     };
     ask_stat_t stats = { 0 };
-
     char *logbuf = NULL;
     size_t loglen = 0u;
     mock_log = open_memstream(&logbuf, &loglen);
     if (!mock_log) MOCKFAIL("unable to allocate memory stream for mock-log");
 
+    // test initial state after "init" function call
     api->init(&host);
-
     if (api->config_get() != 0) MOCKFAIL("Config flags not zero'd by ask_init...");
     for (int i = 0; i < 16; ++i) {
         if (api->reg_get(am_nil, 0) != 0) MOCKFAILF("Register %d not zero'd by ask_init...", i);
     }
     api->stats_report(&stats);
     if (stats.instructions != 0) MOCKFAIL("Instruction count not reset to 0 by CPU initialization...");
-
     fflush(mock_log);
     if (strcmp(logbuf, "CPU initialized\n") != 0) MOCKFAIL("Stipulated 'CPU initialized' log message not detected");
+
+    // test config setting/getting
+    api->config_set(ac_trace_log);
+    if (!(api->config_get() & ac_trace_log)) MOCKFAIL("Unable to verify that ask_config_set/ask_config_get work...");
+
+    // test register setting/getting (with random values to inhibit cheating/accidental passes)
+    unsigned int seed = (unsigned int)time(NULL);
+    srandom(seed);
+    word reg_vals[16] = { 0 };
+    for (int i = 0; i < 16; ++i) {
+        reg_vals[i] = (word)random(); 
+        api->reg_set(am_nil, i, reg_vals[i]);
+    }
+    for (int i = 0; i < 16; ++i) {
+        if (api->reg_get(am_nil, i) != reg_vals[i]) MOCKFAIL("Unable to verify that ask_reg_set/ask_reg_get work...");
+    }
+
+    // test instruction step counts
+    api->cpu_run(1);
+    api->stats_report(&stats);
+    if (stats.instructions != 1) MOCKFAIL("Unable to verify that ask_cpu_run can increment instruction count by 1...");
+    int steps = (int)random() % 97 + 3;
+    api->cpu_run(steps);
+    api->stats_report(&stats);
+    if (stats.instructions != (steps + 1)) MOCKFAIL("Unable to verify that ask_cpu_run can increment instruction count by more than 1...");
 
     ret = 0;
 cleanup:
