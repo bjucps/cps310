@@ -949,6 +949,8 @@ def main(argv):
                     help="Save trace log messages to FILE (or STDERR if FILE is '-')")
     ap.add_argument("-k", "--cache", action="store_true", default=False,
                     help="Enable memory cache (if implemented by KERNEL)")
+    ap.add_argument("-u", "--mpu", action="store_true", default=False,
+                    help="Enable memory protection unit rules when in USR mode (if implemented by KERNEL)")
     ap.add_argument("-s", "--stats-log", dest="stats_log", metavar="CSV_FILE", default=None,
                     help="Append performance stats to CSV_FILE")
     ap.add_argument("-f", "--fiq-interval", dest="fiq_int", metavar="CYCLES", default=0, type=int,
@@ -996,6 +998,8 @@ def main(argv):
         exit(1)
 
     # Validate args/features; warn about possibly bad stuff
+    if args.mpu and ("usr" not in info):
+        print("WARNING: --mpu specified, but {0} does not implement 'usr'...".format(args.kernel), file=sys.stderr)
     if args.cache and ("cache" not in info):
         print("WARNING: --cache specified, but {0} does not implement 'cache'...".format(args.kernel), file=sys.stderr)
     if args.fiq_int and ("fiq" not in info):
@@ -1030,6 +1034,8 @@ def main(argv):
             # In order for input file playback to be synchronized with clock cycles inside
             # the simulator, we MUST enable tracing (even if we don't have a trace log getting saved)
             cflags |= AC_TRACE_LOG
+        if args.mpu:
+            cflags |= AC_MPU_ON
         if args.cache:
             cflags |= AC_CACHE_ON
         ask.config_set(cflags)
