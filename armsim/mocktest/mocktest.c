@@ -38,12 +38,22 @@ struct libask_api {
     X(cpu_signal)\
     X(cpu_run)
 
+struct libask {
+	void *_handle;
+	struct libask_api api;
+};
+
+// dynamically load kernel shared object and resolve names
+bool load_kernel(char *soname, struct libask *);
+
+// free/release a loaded kernel shared object
+void unload_kernel(struct libask *);
 
 // use search data in api->info() for string `prefix`, optionally extracting the rest of the string into `*suffix`
-bool kernel_has(struct libask_api *api, char *prefix, char **suffix);
+bool kernel_has(struct libask *, char *prefix, char **suffix);
 
 // run one round of mockup tests (return 0 on success, non-0 on failure)
-int mockup_tests(struct libask_api *api);
+int mockup_tests(struct libask *api);
 
 int main(int argc, char **argv) {
     int ret = EXIT_FAILURE;
@@ -55,20 +65,6 @@ int main(int argc, char **argv) {
         printf("usage: %s LIBASK_SO\n", argv[0]);
         goto cleanup;
     }
-
-    if ((libask_so = dlopen(argv[1], RTLD_NOW)) == NULL) {
-        printf("error: unable to load '%s' (%s)\n", argv[1], dlerror());
-        goto cleanup;
-    }
-
-    memset(&libask, 0, sizeof libask);
-#define X(stem)\
-    if ((libask.stem = dlsym(libask_so, "ask_" #stem)) == NULL) {\
-        printf("error: unable to load function '" #stem "' (%s)\n", dlerror());\
-        goto cleanup;\
-    }
-    LIBASK_API_NAMES
-#undef X
 
     char *author = NULL;
     if (kernel_has(&libask, "author=", &author)) {
@@ -95,6 +91,25 @@ cleanup:
     memset(&libask, 0, sizeof libask);
     if (libask_so) dlclose(libask_so);
     return ret;
+}
+
+bool load_kernel(char *soname, struct libask *ask) {
+	void *handle = NULL;
+
+    if ((libask_so = dlopen(argv[1], RTLD_NOW)) == NULL) {
+        printf("error: unable to load '%s' (%s)\n", argv[1], dlerror());
+        goto cleanup;
+    }
+
+    memset(&libask, 0, sizeof libask);
+#define X(stem)\
+    if ((libask.stem = dlsym(libask_so, "ask_" #stem)) == NULL) {\
+        printf("error: unable to load function '" #stem "' (%s)\n", dlerror());\
+        goto cleanup;\
+    }
+    LIBASK_API_NAMES
+#undef X
+
 }
 
 bool kernel_has(struct libask_api *api, char *prefix, char **suffix) {
