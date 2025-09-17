@@ -13,8 +13,8 @@ struct libask_api {
     void            (*init)(const struct ask_host_services *);
     void            (*config_set)(ask_config_t flags);
     ask_config_t    (*config_get)(void);
-    void	        (*stats_report)(struct ask_stats *);
-    word	        (*reg_get)(ask_mode_t bank, int index);
+    void            (*stats_report)(struct ask_stats *);
+    word            (*reg_get)(ask_mode_t bank, int index);
     void            (*reg_set)(ask_mode_t bank, int index, word value);
     word            (*cpsr_get)(void);
     void            (*cpsr_set)(word value);
@@ -39,8 +39,8 @@ struct libask_api {
     X(cpu_run)
 
 struct libask {
-	void *_handle;
-	struct libask_api api;
+    void *_handle;
+    struct libask_api api;
 };
 
 // dynamically load kernel shared object and resolve names
@@ -53,30 +53,29 @@ void unload_kernel(struct libask *);
 bool kernel_has(struct libask *, char *prefix, char **suffix);
 
 // run one round of mockup tests (return 0 on success, non-0 on failure)
-int mockup_tests(struct libask *api);
+int mockup_tests(struct libask_api *api);
 
 int main(int argc, char **argv) {
     int ret = EXIT_FAILURE;
-
-    void *libask_so = NULL;
-    struct libask_api libask;
+    struct libask ask = { 0 };
 
     if (argc != 2) {
         printf("usage: %s LIBASK_SO\n", argv[0]);
         goto cleanup;
     }
+    if (!load_kernel(argv[1], &ask)) goto cleanup;
 
     char *author = NULL;
-    if (kernel_has(&libask, "author=", &author)) {
+    if (kernel_has(&ask, "author=", &author)) {
         printf("Hello, %s!\n", author);
     } else {
         printf("Naughty author, not including an 'author=...' tag in ask_info()'s output!\n");
     }
 
-    if (kernel_has(&libask, "mockup", NULL)) {
+    if (kernel_has(&ask, "mockup", NULL)) {
         printf("Running 'mockup' tests on '%s'...\n", argv[1]);
         for (int i = 0; i < 100; ++i) {
-            if (mockup_tests(&libask)) {
+            if (mockup_tests(&ask.api)) {
                 printf("error: mockup tests failed at iteration %d\n", i);
                 goto cleanup;
             }
@@ -88,46 +87,56 @@ int main(int argc, char **argv) {
 
     ret = EXIT_SUCCESS;
 cleanup:
-    memset(&libask, 0, sizeof libask);
-    if (libask_so) dlclose(libask_so);
+    unload_kernel(&ask);
     return ret;
 }
 
-bool load_kernel(char *soname, struct libask *ask) {
-	void *handle = NULL;
+void unload_kernel(struct libask *ask) {
+    if (ask && ask->_handle) dlclose(ask->_handle);
+    memset(ask, 0, sizeof *ask);
+}
 
-    if ((libask_so = dlopen(argv[1], RTLD_NOW)) == NULL) {
-        printf("error: unable to load '%s' (%s)\n", argv[1], dlerror());
+bool load_kernel(char *soname, struct libask *ask) {
+    bool    ret = false;
+    void    *handle = NULL;
+
+    if ((handle = dlopen(soname, RTLD_NOW)) == NULL) {
+        printf("error: unable to load '%s' (%s)\n", soname, dlerror());
         goto cleanup;
     }
 
-    memset(&libask, 0, sizeof libask);
+    memset(ask, 0, sizeof *ask);
 #define X(stem)\
-    if ((libask.stem = dlsym(libask_so, "ask_" #stem)) == NULL) {\
+    if ((ask->api.stem = dlsym(handle, "ask_" #stem)) == NULL) {\
         printf("error: unable to load function '" #stem "' (%s)\n", dlerror());\
         goto cleanup;\
     }
     LIBASK_API_NAMES
 #undef X
-
+    ask->_handle = handle;
+    handle = NULL;
+    ret = true;
+cleanup:
+    if (handle) dlclose(handle);
+    return ret;
 }
 
-bool kernel_has(struct libask_api *api, char *prefix, char **suffix) {
-	size_t prefix_len = strlen(prefix);
-	bool has_suffix = prefix[prefix_len - 1] == '=';
-	if (has_suffix && !suffix) return false;
+bool kernel_has(struct libask *ask, char *prefix, char **suffix) {
+    size_t prefix_len = strlen(prefix);
+    bool has_suffix = prefix[prefix_len - 1] == '=';
+    if (has_suffix && !suffix) return false;
 
-	for (char **ip = api->info(); *ip; ++ip) {
-		if (strncmp(*ip, prefix, prefix_len) == 0) {
-			if (has_suffix) {
-				*suffix = *ip + prefix_len;
-				return true;
-			} else if ((*ip)[prefix_len] == '\0') {
-				return true;
-			}
-		}
-	}	
-	return false;
+    for (char **ip = ask->api.info(); *ip; ++ip) {
+        if (strncmp(*ip, prefix, prefix_len) == 0) {
+            if (has_suffix) {
+                *suffix = *ip + prefix_len;
+                return true;
+            } else if ((*ip)[prefix_len] == '\0') {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 static FILE *mock_log = NULL;

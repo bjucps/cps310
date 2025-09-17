@@ -4,9 +4,36 @@
 #include <stdint.h>
 #include <errno.h>
 
+void print_uint32(uint32_t n, char *opt_comment) {
+	char bits[33] = { 0 };
+	for (int i = 31; i >= 0; --i) {
+		bits[i] = '0' + (n & 1);
+		n >>= 1;
+	}
+	if (opt_comment) {
+		printf("%s\t// %s\n", bits, opt_comment);
+	} else {
+		puts(bits);
+	}	
+}
+
 uint32_t genmask(int bit, int width) {
-    uint32_t ones = (1 << width) - 1;
-    return ones << (bit - width + 1);
+#ifdef DEBUG
+	uint32_t ones = 1 << width;
+	print_uint32(ones, "(1 << width)");
+	ones -= 1;
+	print_uint32(ones, "(1 << width) - 1");
+	int shift = (bit - width + 1);
+	printf("%32d\t// (%d - %d + 1)\n", shift, bit, width);
+	uint32_t mask = ones << shift;
+	char msg[80] = { 0 };
+	snprintf(msg, sizeof msg, "0x%08x << %d [OUTPUT]", ones, shift);
+	print_uint32(mask, msg);
+	return mask;
+#else
+	uint32_t ones = (1 << width) - 1;
+	return ones << (bit - width + 1);
+#endif
 }
 
 bool parse_uint32(char *str, uint32_t *out) {
@@ -44,12 +71,9 @@ usage:
 	}
 
 	uint32_t mask = genmask(bit, width);
-	char bits[33] = { 0 };
-	for (int i = 31; i >= 0; --i) {
-		bits[i] = '0' + (mask & 1);
-		mask >>= 1;
-	}
-	puts(bits);
+#ifndef DEBUG
+	print_uint32(mask, NULL);
+#endif
 
 	return 0;
 }
