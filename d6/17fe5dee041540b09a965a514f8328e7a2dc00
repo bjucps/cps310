@@ -1,0 +1,14 @@
+armsim/starting/askapi.h
+  h_246961404bc193 2,6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d617fe5dee041540b09a965a514f8328e7a2dc00",
+  "prompts": {},
+  "humans": {
+    "h_246961404bc193": {
+      "author": "Jordan Jueckstock <jpjuecks@bju.edu>"
+    }
+  }
+}
