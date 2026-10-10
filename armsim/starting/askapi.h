@@ -1,8 +1,9 @@
 /* ArmSim Kernel API: Defines interface between ArmSim kernels (CPUs) and hosts (systems).
- (c) 2016-2023, Bob Jones University */
+ (c) 2016-2026, Bob Jones University */
 #ifndef ARMSIM_KERNEL_API
 #define ARMSIM_KERNEL_API
 
+#include <stddef.h>
 #include <stdint.h>
 
 /* The ASKAPI functions must be exported with "C" linkage, even if implemented in C++ */
